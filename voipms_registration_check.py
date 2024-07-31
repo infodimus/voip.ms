@@ -91,21 +91,25 @@ def send_email(smtp_server, smtp_port, username, password, sender_email, receive
     except Exception as e:
         print(f'Failed to send email: {e}')
 
-def send_email_to_me(sip_account, body):
+def send_email_to_me(sip_account, body, isFailed):
     smtp_server = 'smtp.example.tld'
     smtp_port = 465
     username = 'sender@yopmail.com'
     password = 'qwerty123'
     sender_email = username
     receiver_email = 'receiver'
-    subject = "Registration failed for account " + sip_account
+    if isFailed == True:
+        subject = "Registration failed for account " + sip_account
+    else:
+        subject = "Registration restored for account " + sip_account
+        
     send_email(smtp_server, smtp_port, username, password, sender_email, receiver_email, subject, body)
 
 def send_email_for_failed_registration(sip_account, text):
-    file_path = "/full_path_to/noreg_" + sip_account + ".txt"
+    file_path = "/home/main/voipms/noreg_" + sip_account + ".txt"
 
     if not os.path.exists(file_path):
-        send_email_to_me(sip_account, text)
+        send_email_to_me(sip_account, text, True)
         with open(file_path, 'w') as file:
             file.write("This file is created to prevent further email sending.")
             print(f"File '{file_path}' created.")
@@ -115,9 +119,17 @@ def send_email_for_failed_registration(sip_account, text):
         print(f"The file '{file_path}' exists. No email sent.")
         write_to_log(f"The file '{file_path}' exists. No email sent.")
 
+def send_email_for_restored_registration(sip_account, text):
+    file_path = "noreg_" + sip_account + ".txt"
+
+    if os.path.exists(file_path):
+        send_email_to_me(sip_account, text, False)        
+    else:
+        print(f"The file '{file_path}' does not exist. No email sent.")
+
 
 def reset_lock(sip_account):
-    file_path = "/full_path_to/noreg_" + sip_account + ".txt"
+    file_path = "/home/main/voipms/noreg_" + sip_account + ".txt"
     if os.path.exists(file_path):
     # If it exists, delete the file
         os.remove(file_path)
@@ -150,7 +162,7 @@ class VoipMS:
 
         message : str
             The body of your SMS message (max chars: 160)
-
+        
         """
         _params: dict[str, str] = {
             "method": "sendSMS",
@@ -161,7 +173,7 @@ class VoipMS:
         self.params.update(_params)
         return requests.get(self.url, params=self.params)
 
-
+        
 
     def get_registration_status(self, account: str) -> requests.Response:
         """gets regostration status
@@ -171,7 +183,7 @@ class VoipMS:
         account : str
             account
 
-
+        
         """
         _params: dict[str, str] = {
             "method": "getRegistrationStatus",
@@ -186,26 +198,23 @@ def validate_registration(voipms, sip_account):
         print(response.json(),end='\n')
         write_to_log(response.json())
 
-
+        
         jresponse = response.json()
         registration_status = jresponse["registered"]
-        #Fot testing only to simulate failre
         #registration_status = 'no'
         print("registered = ", registration_status, end='\n')
 
+        Ъregistration_status = 'no'
+        
         if registration_status == 'no':
            send_email_for_failed_registration(sip_account, str(jresponse))
-           #uncomment next 2 lines if you want also to send SMS notification for failure
-           #message = f"Registration of '{sip_account}' failed"
-           #response = voipms.send_sms(did="990001111", destination="9990002222", message=message)
-
         else:
-           reset_lock(sip_account)
-
-
+           send_email_for_restored_registration(sip_account, str(jresponse))
+           reset_lock(sip_account) 
+           
+        
         return (registration_status, jresponse)
-
-
+   
 def main(voipms: VoipMS):
     check_and_backup_log()
 
