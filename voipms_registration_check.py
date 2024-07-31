@@ -11,6 +11,20 @@ MAX_LOG_FILE_SIZE_MB = 100 #100 MB
 LOG_FILE_PATH = "/full_path_to/voipms.log"
 BACKUP_LOG_FILE_PATH = "/full_path_to/voipms.log.bkp"
 
+VOIPMS_LOGIN_EMAIL = "voipmsloginemail@example.tld"
+VOIPMS_API_PASSWORD = "voipms strong API password"
+
+SMTP_SERVER = 'smtp.example.tld'
+SMTP_PORT = 465 # or 587
+USERNAME = 'mysenderemailaddress@example.tld'
+PASSWORD = 'password for myemailaddress@example.tld' # use password for application for Gmail and Yahoo
+SENDER_EMAIL = USERNAME
+RECEIVER_EMAIL = 'myreceiveremailaddress@example.tld'
+
+SIP_ACCOUNT_1 = 'your voip.ms SIP user'
+SIP_ACCOUNT_2 = 'your another voip.ms SIP user' #remove if not needed
+    
+
 def write_to_log(s):
     """
     Writes a given string, along with the current date and time, to a log file located at LOG_FILE_PATH.
@@ -22,7 +36,7 @@ def write_to_log(s):
     current_time = datetime.datetime.now()
     # Format the date and time
     timestamp = current_time.strftime('%Y-%m-%d %H:%M:%S')
-
+    
     # Create the log entry with the timestamp
     log_entry = f"{timestamp} - {s}\n"
 
@@ -35,8 +49,8 @@ def check_and_backup_log():
     Checks if the size of 'voipms.log' exceeds 100 MB. If it does, it backs up the file to 'voipms.log.bkp'
     and resets the 'voipms.log' file.
     """
-
-
+    
+       
     # Check if the file exists
     if not os.path.exists(LOG_FILE_PATH):
         print("Log file does not exist.")
@@ -92,17 +106,17 @@ def send_email(smtp_server, smtp_port, username, password, sender_email, receive
         print(f'Failed to send email: {e}')
 
 def send_email_to_me(sip_account, body, isFailed):
-    smtp_server = 'smtp.example.tld'
-    smtp_port = 465
-    username = 'sender@yopmail.com'
-    password = 'qwerty123'
-    sender_email = username
-    receiver_email = 'receiver'
+    smtp_server = SMTP_SERVER
+    smtp_port = SMTP_PORT
+    username = USERNAME
+    password = PASSWORD
+    sender_email = USERNAME
+    receiver_email = RECEIVER_EMAIL
+    
     if isFailed == True:
         subject = "Registration failed for account " + sip_account
     else:
         subject = "Registration restored for account " + sip_account
-        
     send_email(smtp_server, smtp_port, username, password, sender_email, receiver_email, subject, body)
 
 def send_email_for_failed_registration(sip_account, text):
@@ -201,10 +215,9 @@ def validate_registration(voipms, sip_account):
         
         jresponse = response.json()
         registration_status = jresponse["registered"]
-        #registration_status = 'no'
         print("registered = ", registration_status, end='\n')
 
-        Ъregistration_status = 'no'
+        #registration_status = 'no'
         
         if registration_status == 'no':
            send_email_for_failed_registration(sip_account, str(jresponse))
@@ -215,20 +228,23 @@ def validate_registration(voipms, sip_account):
         
         return (registration_status, jresponse)
    
+    
 def main(voipms: VoipMS):
     check_and_backup_log()
 
     write_to_log(f"VoipMS Registration validation started")
 
-    #123456 is a main account
-    status, response = validate_registration(voipms, '123456')
-
-    #123456_1 is a sub-account
-    status, response = validate_registration(voipms, '123456_1')
+    message = "Hello World"
+    #response = voipms.send_sms(did="990001111", destination="9990002222", message=message)
+    sip_account = SIP_ACCOUNT_1
+    status, response = validate_registration(voipms, sip_account)
+    
+    sip_account = SIP_ACCOUNT_2
+    status, response = validate_registration(voipms, sip_account)
 
     write_to_log(f"VoipMS Registration validation ended\n")
 
 
 
 if __name__ == "__main__":
-    main(VoipMS("voipmsloginemail@example.tld", "VoipMS_API_Password"))
+    main(VoipMS(VOIPMS_LOGIN_EMAIL, VOIPMS_API_PASSWORD))
