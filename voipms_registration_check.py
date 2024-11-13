@@ -134,7 +134,7 @@ def send_email_for_failed_registration(sip_account, text):
         write_to_log(f"The file '{file_path}' exists. No email sent.")
 
 def send_email_for_restored_registration(sip_account, text):
-    file_path = "noreg_" + sip_account + ".txt"
+    file_path = "/home/main/voipms/noreg_" + sip_account + ".txt"
 
     if os.path.exists(file_path):
         send_email_to_me(sip_account, text, False)        
